@@ -94,3 +94,126 @@ def prepare_partition_dataframes(
         duplicates = (
             split_df.loc[
                 split_df["subject_id"].duplicated(keep=False), "subject_id"
+            ]
+            .unique()
+            .tolist()
+        )
+        raise ValueError(
+            "Subject split must contain one row per subject. "
+            f"Duplicate subject IDs include: {duplicates[:10]}"
+        )
+
+    split_df["partition"] = split_df["partition"].astype(str).str.strip()
+    unexpected_partitions = (
+        set(split_df["partition"].unique()) - set(VALID_PARTITIONS)
+    )
+    if unexpected_partitions:
+        raise ValueError(
+            f"Unexpected partition values: {sorted(unexpected_partitions)}. "
+            f"Expected only: {list(VALID_PARTITIONS)}."
+        )
+
+    # Fail early when essential manifest metadata is absent.
+    if manifest_df["subject_id"].isna().any():
+        raise ValueError("Manifest contains missing subject_id values.")
+    if manifest_df["filename"].isna().any():
+        raise ValueError("Manifest contains missing filename values.")
+    if manifest_df["image_path"].isna().any():
+        raise ValueError("Manifest contains missing image_path values.")
+    if manifest_df[["muscle_code", "side_code"]].isna().any().any():
+        raise ValueError("Manifest contains missing muscle_code or side_code values.")
+
+    # A partition column belongs to the split file. Avoid ambiguous merge suffixes.
+    if "partition" in manifest_df.columns:
+        raise ValueError(
+            "Manifest already contains a 'partition' column. "
+            "Pass the original audited manifest without an attached split."
+        )
+
+    # Retain only records with an available Heckmatt grade, as in the notebook.
+    labelled_df = manifest_df.loc[
+        manifest_df["heckmatt_grade"].notna()
+    ].copy()
+
+    if labelled_df.empty:
+        raise ValueError("No labelled records were found in the manifest.")
+
+    # Attach the previously approved subject-level split; do not resplit.
+    labelled_df = labelled_df.merge(
+        split_df[["subject_id", "partition"]],
+        on="subject_id",
+        how="left",
+        validate="many_to_one",
+        indicator=True,
+    )
+
+    unmatched = labelled_df["_merge"] != "both"
+    if unmatched.any():
+        missing_subjects = (
+            labelled_df.loc[unmatched, "subject_id"].drop_duplicates().tolist()
+        )
+        raise ValueError(
+            "Some labelled records have no approved subject partition. "
+            f"Example subject IDs: {missing_subjects[:10]}"
+        )
+
+    labelled_df = labelled_df.drop(columns=["_merge"])
+
+    grades = pd.to_numeric(labelled_df["heckmatt_grade"], errors="coerce")
+    invalid_grades = grades.isna() | ~grades.isin(VALID_GRADES)
+    if invalid_grades.any():
+        invalid_values = (
+            labelled_df.loc[invalid_grades, "heckmatt_grade"]
+            .astype(str)
+            .drop_duplicates()
+            .tolist()
+        )
+        raise ValueError(
+            "Heckmatt grades must be integers in {1, 2, 3, 4}. "
+            f"Invalid values include: {invalid_values[:10]}"
+        )
+
+    labelled_df["heckmatt_grade"] = grades.astype(int)
+    labelled_df["label"] = labelled_df["heckmatt_grade"] - 1
+
+    # Preserve the group definition used for group-level evaluation.
+    labelled_df["group_id"] = (
+        labelled_df["subject_id"].astype(str)
+        + "_"
+        + labelled_df["muscle_code"].astype(str)
+        + "_"
+        + labelled_df["side_code"].astype(str)
+    )
+
+    partitions = {
+        name: (
+            labelled_df.loc[labelled_df["partition"] == name]
+            .copy()
+            .reset_index(drop=True)
+        )
+        for name in VALID_PARTITIONS
+    }
+
+    # Ensure that no participant occurs in more than one partition.
+    subject_sets = {
+        name: set(frame["subject_id"].unique())
+        for name, frame in partitions.items()
+    }
+    for index, first in enumerate(VALID_PARTITIONS):
+        for second in VALID_PARTITIONS[index + 1 :]:
+            overlap = subject_sets[first].intersection(subject_sets[second])
+            if overlap:
+                raise ValueError(
+                    f"Subject leakage between {first} and {second}: "
+                    f"{sorted(overlap)[:10]}"
+                )
+
+    # Every labelled record must appear in exactly one returned partition.
+    partition_record_count = sum(len(frame) for frame in partitions.values())
+    if partition_record_count != len(labelled_df):
+        raise RuntimeError(
+            "Partitioning lost or duplicated labelled image records: "
+            f"{partition_record_count} returned versus {len(labelled_df)} labelled."
+        )
+
+    return partitions

@@ -1,0 +1,18 @@
+# Data handling
+numpy
+pandas
+Pillow
+
+# Machine learning
+scikit-learn
+
+# CNN
+torch
+torchvision
+
+# Radiomics
+SimpleITK
+pyradiomics
+
+# Testing
+pytest

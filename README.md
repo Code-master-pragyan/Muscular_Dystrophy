@@ -1,39 +1,39 @@
 # Hybrid CNN and Radiomics Framework for FSHD Ultrasound Classification
 
-A research project investigating automated Heckmatt grade classification in Facioscapulohumeral Muscular Dystrophy (FSHD) using ultrasound images, deep learning and radiomics.
+An experimental research framework for automated classification of Facioscapulohumeral Muscular Dystrophy (FSHD) ultrasound images using deep learning, handcrafted radiomics, feature fusion and explainable AI.
 
 ## 1. Project Overview
 
-This project investigates an automated approach for classifying muscle ultrasound images into four Heckmatt grades (Grade 1–4).
+The objective is to classify muscle ultrasound images into four Heckmatt grades (Grade 1–4).
 
-The research focuses on:
+The project investigates:
 
-- Image-based classification using a convolutional neural network (CNN).
+- CNN-based image classification using ResNet18.
 - Handcrafted radiomics feature extraction using PyRadiomics.
-- Group-level evaluation at the subject–muscle–side level.
-- Investigation of CNN and radiomics feature integration.
-- Explainability and careful interpretation of model performance.
+- Subject–muscle–side level aggregation and evaluation.
+- CNN embedding and radiomics feature integration.
+- XGBoost-based hybrid classification.
+- Feature importance and SHAP explainability.
+- Statistical comparison of model performance.
 
-**Research scope:** The current modelling experiments use Dataset B (FSHD ultrasound). Dataset A (MRI) has been audited separately and is not combined with Dataset B or used in the current modelling pipeline.
+**Research scope:** Dataset B (FSHD ultrasound) is used for the current modelling experiments. Dataset A (MRI) has been audited separately and is not combined with Dataset B.
 
 ## 2. Dataset Information
 
 ### Dataset B — FSHD Ultrasound
 
-The ultrasound dataset contains:
-
 | Description | Count |
 |---|---:|
 | Original ultrasound images | 25,005 |
 | Corresponding masks | 25,005 |
-| Labelled image records used | 4,727 |
+| Labelled image records | 4,727 |
 | Unlabelled records excluded | 20,278 |
 | Subjects | 109 |
 | Subject–muscle–side groups | 1,468 |
 
-Only labelled records with valid Heckmatt grades are used in supervised classification.
+Only labelled records with valid Heckmatt grades are used for supervised classification.
 
-### Subject-Level Data Split
+### Approved Subject-Level Split
 
 | Partition | Subjects | Image records | Groups |
 |---|---:|---:|---:|
@@ -42,94 +42,169 @@ Only labelled records with valid Heckmatt grades are used in supervised classifi
 | Testing | 16 | 644 | 208 |
 | **Total** | **109** | **4,727** | **1,468** |
 
-The approved subject-level split is reused throughout the experiments to prevent subject overlap between partitions.
+The approved subject-level split is reused across experiments to prevent subject overlap between partitions.
 
 ### Dataset A — MRI
 
-The Benchmark Diagnostic MRI and Medical Imaging Dataset has been audited separately. It is not combined with the FSHD ultrasound dataset in the current experiments.
+The Benchmark Diagnostic MRI and Medical Imaging Dataset was audited separately. It is not used in the current FSHD ultrasound modelling pipeline.
 
 ## 3. Methodology
 
-### 3.1 Image Preprocessing
+### 3.1 Preprocessing
 
-The CNN preprocessing pipeline uses:
+- Grayscale ultrasound image loading.
+- Metadata and label validation.
+- Image-mask consistency checks.
+- Subject-level partition validation.
+- CNN image resizing to 224 × 224 pixels.
+- Tensor conversion and normalization.
 
-- Grayscale ultrasound images.
-- Resizing to 224 × 224 pixels.
-- Conversion to tensors.
-- Normalization using mean 0.485 and standard deviation 0.229.
+The CNN uses images only; segmentation masks are not CNN inputs.
 
 ### 3.2 CNN Classification
 
-The CNN baseline uses an ImageNet-pretrained ResNet18 architecture.
+The baseline model uses ImageNet-pretrained ResNet18.
 
-Key implementation details:
+| Parameter | Setting |
+|---|---|
+| Architecture | ResNet18 |
+| Input channels | 1 (grayscale) |
+| Image size | 224 × 224 |
+| Output classes | 4 |
+| Batch size | 32 |
+| Learning rate | 0.0001 |
+| Weight decay | 0.0001 |
+| Maximum epochs | 30 |
+| Early stopping patience | 7 |
+| Random seed | 42 |
 
-- Single-channel grayscale input.
-- Pretrained RGB convolution weights converted to grayscale initialization by averaging the input-channel weights.
-- Four output classes corresponding to Heckmatt Grades 1–4.
-- Training and model selection using validation group-level macro-F1.
+The pretrained RGB input convolution weights are converted to single-channel initialization by averaging the RGB channel weights.
 
-The pooled ResNet18 representation contains 512 features per image.
+The pooled CNN representation contains 512 features per image.
 
-### 3.3 Radiomics Feature Extraction
+### 3.3 Radiomics Extraction
 
 Radiomics features are extracted using PyRadiomics.
 
-The documented extraction configuration includes:
+| Parameter | Setting |
+|---|---|
+| Image type | Original |
+| Bin width | 25 |
+| Mask label | 1 |
+| Normalize | False |
+| Resampling | Not enabled |
+| Feature classes | First Order, GLCM, GLRLM, GLSZM, GLDM, NGTDM, Shape2D |
 
-- Bin width: 25.
-- Mask label: 1.
-- Normalization: disabled.
-- Image type: Original.
-- Feature classes: First Order, GLCM, GLRLM, GLSZM, GLDM, NGTDM and Shape2D.
+The audited feature tables contain 102 radiomics features.
 
-The audited radiomics feature tables contain 102 radiomics features.
+### 3.4 Feature Fusion
 
-### 3.4 Group-Level Analysis
+The image-level fusion representation contains:
 
-Images belonging to the same subject–muscle–side group are aggregated for group-level analysis.
+- 512 CNN embedding features.
+- 102 radiomics features.
+- 614 combined input features.
 
-The radiomics aggregation utility calculates the arithmetic mean of image-level features within each group.
+The hybrid analysis includes feature selection, XGBoost classification, explainability and statistical comparison.
 
-Image-level and group-level evaluation results are treated as separate evaluation units.
+**Important observed result:** The audited selected hybrid booster contains 54 selected features, all from the CNN modality and zero from radiomics. The modality-level SHAP summary attributes 100% to CNN and 0% to radiomics. Therefore, the archived hybrid result should not be presented as evidence of a selected radiomics contribution.
 
-## 4. Repository Structure
+## 4. Key Experimental Findings
+
+The archived comparison reported:
+
+- Hybrid macro-F1 improvement over CNN: approximately 0.54 percentage points.
+- Hybrid balanced accuracy difference relative to CNN: approximately -1.33 percentage points.
+- Paired subject-level bootstrap 95% confidence interval for the hybrid-minus-CNN macro-F1 difference: [-0.0453, 0.0447].
+
+The confidence interval includes zero. Therefore, the observed macro-F1 difference does not establish a statistically clear improvement over the CNN baseline.
+
+Results are interpreted using the same held-out subject groups and the documented evaluation methodology.
+
+## 5. Repository Structure
 
 ```text
 Muscular_Dystrophy/
 │
+├── .github/
+│   └── workflows/
+│       └── tests.yml
+│
+├── notebooks/
+│   ├── README.md
+│   └── Mascular_Dystrophy_Research.ipynb
+│
 ├── src/
+│   ├── preprocessing/
+│   │   ├── __init__.py
+│   │   ├── data.py
+│   │   ├── manifest.py
+│   │   ├── split.py
+│   │   ├── mask_validation.py
+│   │   └── validation.py
+│   │
 │   ├── cnn/
 │   │   ├── __init__.py
 │   │   ├── config.py
 │   │   ├── dataset.py
 │   │   ├── model.py
 │   │   ├── train.py
-│   │   └── evaluate.py
+│   │   ├── evaluate.py
+│   │   ├── loaders.py
+│   │   ├── optimization.py
+│   │   ├── artifacts.py
+│   │   ├── checkpoint.py
+│   │   ├── results.py
+│   │   ├── experiment.py
+│   │   ├── training_plots.py
+│   │   ├── predictions.py
+│   │   ├── image_results.py
+│   │   └── embeddings.py
 │   │
-│   ├── preprocessing/
+│   ├── radiomics/
 │   │   ├── __init__.py
-│   │   ├── data.py
-│   │   └── validation.py
+│   │   ├── config.py
+│   │   ├── extraction.py
+│   │   ├── aggregation.py
+│   │   ├── evaluate.py
+│   │   ├── quality.py
+│   │   ├── feature_analysis.py
+│   │   ├── validation.py
+│   │   ├── audit.py
+│   │   └── radiomics_README.md
 │   │
-│   └── radiomics/
-│       ├── __init__.py
-│       ├── config.py
-│       ├── extraction.py
+│   └── fusion/
+│       ├── merge.py
 │       ├── aggregation.py
+│       ├── train.py
 │       ├── evaluate.py
-│       └── radiomics_README.md
+│       ├── explainability.py
+│       ├── statistics.py
+│       └── figures.py
 │
 ├── tests/
 │   ├── test_preprocessing.py
 │   └── test_radiomics_aggregation.py
 │
+├── docs/
+│   └── experiment_protocol.md
+│
+├── results/
+│   ├── cnn/
+│   ├── radiomics/
+│   └── hybrid/
+│
+├── figures/
+│   ├── README.md
+│   └── research figures
+│
 ├── README.md
 └── requirements.txt
 ```
 
-## 5. Installation
+The original notebook records the Colab experimental workflow. The `src/` directory contains reusable modular Python implementations.
+
+## 6. Installation
 
 Clone the repository:
 
@@ -151,47 +226,91 @@ Activate it on Windows:
 venv\Scripts\activate
 ```
 
-Install project dependencies:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Note:** Install a compatible PyTorch and Torchvision build for your hardware and CUDA environment.
+Install a PyTorch and Torchvision build compatible with your hardware and CUDA environment where required.
 
-## 6. Running Tests
+## 7. Testing
 
-Run the existing test suite from the repository root:
+Run the unit tests from the project root:
 
 ```bash
-python -m pytest tests/ -v
+python -m pytest -v
 ```
 
-The tests cover preprocessing validation and radiomics group aggregation.
+Check Python syntax:
 
-## 7. Research Limitations and Reproducibility
+```bash
+python -m compileall -q src tests
+```
 
-The following limitations are important for interpreting the experiments:
+### GitHub Actions
+
+The repository includes an automated GitHub Actions workflow.
+
+The workflow runs on pushes to `main`, pull requests targeting `main`, and manual execution.
+
+It performs:
+
+1. Python syntax compilation.
+2. Preprocessing unit tests.
+3. Radiomics aggregation unit tests.
+
+The current test suite contains 13 tests, which passed in the latest verified successful GitHub Actions run.
+
+These checks do not represent a complete end-to-end training run.
+
+## 8. Results and Artifacts
+
+The `results/` directory contains selected archived experimental outputs, including:
+
+- CNN image-level and group-level metrics.
+- Radiomics evaluation results.
+- Hybrid model predictions and evaluation.
+- Feature selection summaries.
+- Statistical comparison tables.
+
+The `figures/` directory contains research figures generated from the experiments:
+
+- CNN training and validation curves.
+- Group-level confusion matrices.
+- Model performance confidence intervals.
+- Radiomics and hybrid explainability figures.
+
+Only actual outputs generated by the experiments should be presented as experimental results.
+
+## 9. Reproducibility and Limitations
 
 1. The original standalone radiomics XGBoost training script has not been recovered. The saved booster configuration does not establish the complete original training procedure.
 2. Two non-identical radiomics extraction scripts were recovered. The exact script that generated the archived feature CSV files has not been established.
-3. The available image metadata spacing is not verified physical millimetre spacing. Shape measurements should not be interpreted as calibrated physical dimensions.
-4. Heckmatt Grade 4 has relatively low sample support, resulting in greater uncertainty for that class.
-5. CNN and radiomics results must be compared using the same evaluation unit and test groups.
-6. The current implementation is an experimental research framework, not a clinically validated diagnostic system.
+3. Available image spacing metadata is not verified physical millimetre spacing. Shape measurements should not be interpreted as calibrated physical dimensions.
+4. Heckmatt Grade 4 has relatively low sample support, increasing uncertainty for that class.
+5. The approved subject-level split must be preserved for fair model comparison.
+6. Some modular utilities were reconstructed from the exported notebook workflow where original source cells were unavailable. They should not all be described as exact historical reproductions.
+7. The current framework is experimental and has not been clinically validated.
 
-## 8. Research Integrity
+## 10. Research Integrity
 
-The project distinguishes between implemented methods, observed saved-model properties and independently verified experimental findings.
+The project distinguishes between:
 
-In particular, the presence of radiomics features in an input feature table does not establish that they contributed to the final hybrid classifier.
+- Original Colab experimental workflow.
+- Reusable modular Python implementations.
+- Observed saved-model properties.
+- Verified experimental findings.
+- Reconstructed or newly written utilities.
 
-No unverified architectural components, training procedures or clinical performance claims are presented as established findings.
+The presence of radiomics features in a combined input table does not establish that radiomics contributed to the selected hybrid classifier.
 
-## 9. Repository
+No unverified results, procedures or clinical performance claims should be presented as established findings.
+
+## 11. Repository
 
 **GitHub:** https://github.com/Code-master-pragyan/Muscular_Dystrophy
 
-**Project:** FSHD Ultrasound-Based Heckmatt Grade Classification
+**Project:** Hybrid CNN and Radiomics Framework for FSHD Ultrasound Classification
 
 **Status:** Research and experimental development.

@@ -1,0 +1,12 @@
+{
+    "evaluation_level": "Image-level",
+    "dataset": "Dataset B - FSHD Ultrasound",
+    "partition": "Test",
+    "number_of_images": 644,
+    "number_of_subjects": 16,
+    "number_of_groups": 208,
+    "accuracy": 0.7236024844720497,
+    "macro_f1": 0.6868259725119467,
+    "balanced_accuracy": 0.6836765973752276,
+    "verification_status": "Matched original recorded accuracy and macro-F1"
+}

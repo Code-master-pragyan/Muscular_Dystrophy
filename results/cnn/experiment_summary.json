@@ -1,0 +1,24 @@
+{
+    "model": "ResNet18",
+    "dataset": "Dataset B - FSHD Ultrasound",
+    "task": "Heckmatt grade classification",
+    "classes": [
+        "G1",
+        "G2",
+        "G3",
+        "G4"
+    ],
+    "best_epoch": 5,
+    "selection_metric": "Validation group-level macro-F1",
+    "best_validation_group_macro_f1": 0.7536261240356633,
+    "test_group_macro_f1": 0.7024135586635586,
+    "test_group_accuracy": 0.7259615384615384,
+    "test_group_balanced_accuracy": 0.7037102988575005,
+    "test_image_accuracy": 0.7236024844720497,
+    "test_image_macro_f1": 0.6868259725119467,
+    "random_seed": 42,
+    "maximum_epochs": 30,
+    "early_stopping_patience": 7,
+    "primary_evaluation": "Group-level mean probability aggregation",
+    "secondary_evaluation": "Image-level classification"
+}

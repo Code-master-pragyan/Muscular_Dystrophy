@@ -1,0 +1,3 @@
+modality,mean_abs_shap,contribution_percent
+CNN,0.33999923,100.0
+Radiomics,0.0,0.0

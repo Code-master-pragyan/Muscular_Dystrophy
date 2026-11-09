@@ -57,7 +57,10 @@ def test_valid_partitions_pass_validation():
 
 def test_subject_overlap_is_rejected():
     partitions = make_valid_partitions()
+
+    # Change subject_id and keep group_id consistent.
     partitions["test"].loc[0, "subject_id"] = "subject_train"
+    partitions["test"].loc[0, "group_id"] = "subject_train_1_1"
 
     with pytest.raises(ValueError, match="Subject leakage"):
         validate_partition_dataframes(

@@ -1,0 +1,35 @@
+
+name: Python Repository Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scikit-learn pytest
+
+      - name: Check Python syntax
+        run: |
+          python -m compileall -q src tests
+
+      - name: Run unit tests
+        run: |
+          python -m pytest -v

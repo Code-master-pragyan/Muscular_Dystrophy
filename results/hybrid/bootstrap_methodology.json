@@ -1,0 +1,26 @@
+{
+    "analysis": "Subject-level cluster bootstrap",
+    "bootstrap_repetitions": 2000,
+    "random_seed": 42,
+    "resampling_unit": "Subject",
+    "independent_test_subjects": 16,
+    "test_groups": 208,
+    "grade_coverage_subjects": {
+        "G1": 14,
+        "G2": 14,
+        "G3": 14,
+        "G4": 6
+    },
+    "confidence_interval": "Percentile 95% CI",
+    "models": [
+        "ResNet18 CNN",
+        "Radiomics XGBoost",
+        "CNN-Radiomics Hybrid XGBoost"
+    ],
+    "interpretation": "Hybrid achieved slightly higher point estimates than CNN for accuracy and macro-F1. However, paired bootstrap confidence intervals for both differences included zero. No clear performance improvement over CNN was established.",
+    "limitations": [
+        "Only 16 independent test subjects",
+        "G4 represented in only 6 test subjects",
+        "Bootstrap estimates may be unstable with few clusters"
+    ]
+}

@@ -20,3 +20,9 @@ pytest
 
 scipy
 statsmodels
+
+
+iterative-stratification
+xgboost
+shap
+matplotlib
